@@ -1,109 +1,62 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
+from typing import Tuple
 
 
-class max_peak_detector:
-
+def calculate_max_peaks_and_location(data_window: np.array) -> Tuple[np.array, int]:
     """
-    A class representing the max peak detector that uses the time that a variable as its maximum
-    compared to the maximums of all other variables in order to detect the leading variable.
+    Computes the time that each m variable has its maximum value, then uses the relative timings to
+    detect the leading variable.
 
-    ...
-
-    Attributes
-    ----------
-
-    data_window: numpy.array
-        A m by t matrix representing a time window of a multivariate signal.
-
-    num_sensors: int
-        The number of sensors/variables in the given data window.
-
-
-    peaks: numpy.array
-        A m length array containing the time sample that an individual variable has had its maximum
-        in the given data window.
-
-    pulse_location: int
-        The m value corresponding to the variable that leads all the others in the given data window.
-
-
-    Methods
-    -------
-
-     get_max_peak():
-         Computes the time that each m variable has its maximum value, then uses the relative timings to
-         detect the leading variable.
-
-      plot():
-          Plots the calculated peaks and the time they occur in the given data window, indicating the leading
-          variable.
-
+    :param data_window: m x n matrix of m variables.
+    :return: The timings of the max peaks and the pulse location.
     """
+    max_peak_times = []
+    # Find the time of the max absolute peaks for each sensor
+    for sensor in abs(data_window):
+        max_peak_times.append(sensor.argmax())
 
-    def __init__(self, data_window, num_sensors):
+    # Find the sensor that has its max at the earliest time
+    max_peak_times = np.array(max_peak_times)
+    pulse_location = max_peak_times.argmin()
 
-        """
-        Constructs all the necessary attribute for the lead_lag_detector object.
+    return max_peak_times, pulse_location
 
-        Parameters
-        ----------
 
-        data_window: pandas.DataFrame
-            A dataframe representing a m by t matrix of m variables of a multivariate signal.
+def plot_max_peaks_and_location(
+    max_peak_times: np.array, pulse_location: int
+) -> plt.figure:
+    """
+    Plots the calculated peaks and the time they occur in the given data window, indicating the leading
+    variable.
+    """
+    plt.cla()
+    fig, ax = plt.subplots(figsize=(10, 6))
+    num_sensors = max_peak_times.shape[0]
+    ax.plot(
+        max_peak_times,
+        np.arange(num_sensors),
+        "k.-",
+        markersize=8,
+        label="Max. peaks",
+    )
 
-        num_sensors: int
-            The number of sensors/variables in the given data window.
+    ax.text(max(max_peak_times) * 0.97, pulse_location + 0.1, "Minimum")
+    ax.hlines(
+        pulse_location,
+        min(max_peak_times),
+        max(max_peak_times),
+        "r",
+        linestyles="dashed",
+    )
 
-        """
-        self.data_window = data_window.abs().values.T
-        self.num_sensors = num_sensors
-        self.peaks = np.zeros(num_sensors)
-        self.get_max_peak()
+    ax.set_xlabel("Time: [s]")
+    ax.set_yticks(range(num_sensors))
+    tick_labels = [f"sensor {i}" for i in range(1, num_sensors + 1)]
+    ax.set_yticklabels(tick_labels)
 
-    def get_max_peak(self):
+    ax.set_xlim(min(max_peak_times) - 3, max(max_peak_times) + 3)
+    plt.legend()
 
-        # Find the time of the max absolute peaks for each sensor
-        for i, row in enumerate(self.data_window):
-            self.peaks[i] = row.argmax()
-
-        # Find the sensor that has its max at the earliest time
-        self.pulse_location = self.peaks.argmin()
-
-    def plot(self):
-
-        """
-        Plots the calculated peaks and the time they occur in the given data window, indicating the leading
-        variable.
-        """
-
-        matplotlib.rcParams["text.usetex"] = True
-        matplotlib.rcParams["font.size"] = 14
-        matplotlib.rcParams["font.family"] = "serif"
-
-        fig, ax = plt.subplots(figsize=(10, 6))
-
-        ax.plot(
-            self.peaks,
-            np.arange(self.num_sensors),
-            "k.-",
-            markersize=8,
-            label="Max. peaks",
-        )
-
-        ax.text(max(self.peaks) - 10, self.pulse_location + 0.1, "Minimum")
-        ax.hlines(
-            self.pulse_location,
-            min(self.peaks),
-            max(self.peaks),
-            "r",
-            linestyles="dashed",
-        )
-
-        ax.set_xlabel("Time: [s]")
-        ax.set_yticks(range(self.num_sensors))
-        ax.set_yticklabels(["Z%d" % i for i in range(1, self.num_sensors + 1)])
-
-        ax.set_xlim(min(self.peaks) - 3, max(self.peaks) + 3)
-        plt.legend()
+    return fig
