@@ -24,11 +24,19 @@ def test_calculate_lead_lag_matrix():
     assert_array_equal(lead_lag_matrix, np.array([[0.5, 1.0], [0.0, 0.5]]))
 
 
+def test_get_pulse_lags_and_location():
+
+    lead_lag_matrix = np.array([[0.5, 1.0], [0.0, 0.5]])
+    pulse_lags, pulse_location = sut.get_pulse_lags_and_location(lead_lag_matrix)
+    assert_array_equal(pulse_lags, np.array([0.75, 0.25]))
+    assert pulse_location == 1
+
+
 def test_plot_lead_lag_matrix():
 
     lead_lag_matrix = sut.calculate_lead_lag_matrix(
         np.array([ARRAY_1, ARRAY_2, ARRAY_1])
     )
     fig = sut.plot_lead_lag_matrix(lead_lag_matrix)
-    file_path = "tests/slam_locators/test_output/"
+    file_path = "tests/slam_locators/tests_output/"
     plt.savefig(file_path + "lead_lag_matrix.png")
