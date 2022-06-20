@@ -18,8 +18,8 @@ def calculate_lead_lag_matrix(
     """
 
     lead_lag_matrix = np.zeros((data_window.shape[0], data_window.shape[0]))
-    for i, x in enumerate(data_window):
-        for j, y in enumerate(data_window):
+    for i, x in enumerate(abs(data_window)):
+        for j, y in enumerate(abs(data_window)):
 
             # Theshold the time sample length to cross-correlation maximum using the
             # heaviside function according to lags [0], equal [0.5] or leads [1]
@@ -71,7 +71,9 @@ def _compute_cross_correlation_fft(x: np.array, y: np.array) -> np.array:
     return fftshift(cc)
 
 
-def get_pulse_lags_and_location(lead_lag_matrix: np.array) -> Tuple[np.array, int]:
+def calculate_pulse_lags_and_location(
+    lead_lag_matrix: np.array,
+) -> Tuple[np.array, int]:
     """
     :param lead_lag_matrix: m x m matrix containg the pairwise lead lag relationship between variables.
     :return: _description_
@@ -94,7 +96,7 @@ def plot_lead_lag_matrix(lead_lag_matrix: np.array) -> plt.figure:
 
     matplotlib.rcParams.update({"font.size": 12})
     num_sensors = lead_lag_matrix.shape[0]
-    pulse_lags, pulse_location = get_pulse_lags_and_location(lead_lag_matrix)
+    pulse_lags, pulse_location = calculate_pulse_lags_and_location(lead_lag_matrix)
     plt.cla()
     fig = plt.figure(constrained_layout=True, figsize=(10, 6))
     gs = fig.add_gridspec(3, 3)
