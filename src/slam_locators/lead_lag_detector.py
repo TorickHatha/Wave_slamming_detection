@@ -44,7 +44,7 @@ def _compute_shift(x: np.array, y: np.array) -> int:
     """
 
     if len(x) != len(y):
-        raise ValueError(f"Input arrays not of equal length: x-{len(x)} y-{len(y)}")
+        raise ValueError(f"Input arrays not of equal length: x-{len(x)} vs y-{len(y)}")
 
     cross_correlation = _compute_cross_correlation_fft(x, y)
 
