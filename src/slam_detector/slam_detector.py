@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
-import umap as umap_decomposition
+import umap.umap_ as umap
 from sklearn.cluster import DBSCAN
 from src.utils.recurrence_plots import calculate_recurrence_plot
 
@@ -578,7 +578,7 @@ def get_PCA_transformed_and_variance(
     return pca_transformed, pca_model.explained_variance_ratio_
 
 
-def plot_PCA_explained_variance(explained_variance: np.array) -> plt.fig:
+def plot_PCA_explained_variance(explained_variance: np.array) -> plt.figure:
     """_summary_
 
     :param explained_variance: _description_
@@ -614,8 +614,11 @@ def get_UMAP_tranformed(
     :return: _description_
     """
 
-    umap_model = umap_decomposition.UMAP(
-        n_neighbors, min_dist, random_state, n_components
+    umap_model = umap.UMAP(
+        n_neighbors=n_neighbors,
+        min_dist=min_dist,
+        random_state=random_state,
+        n_components=n_components,
     )
 
     umap_transformed = umap_model.fit_transform(feature_vectors)
