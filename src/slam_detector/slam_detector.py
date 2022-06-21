@@ -1,15 +1,16 @@
 from skimage.transform import resize
-from keras.applications.vgg16 import VGG16
-from keras.applications.vgg16 import preprocess_input
+from keras.applications import vgg16
 from keras.models import Model
 from keras.layers import Flatten
 from pyts import utils
+from typing import Tuple
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import PCA as scikit_PCA
+from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import umap as umap_decomposition
 from sklearn.cluster import DBSCAN
+from src.utils.recurrence_plots import calculate_recurrence_plot
 
 
 class wave_slam_detector:
@@ -455,3 +456,180 @@ class wave_slam_detector:
             self.results_df.loc[i, "approximate_impact_time_sample"] = approx_time
 
         return self.results_df
+
+
+def create_window_indices(array_length: int, window_size: int, stride: int) -> np.array:
+    """_summary_
+
+    :param array_length: _description_
+    :param window_size: _description_
+    :param stride: _description_
+    :return: _description_
+    """
+    windowed_index = utils.windowed_view(
+        np.arange(0, array_length).reshape(1, -1), window_size, stride
+    )[0]
+
+    return windowed_index
+
+
+def extract_VGG16_features(
+    time_series: np.array,
+    window_size: int,
+    stride: int,
+    image_type: str,
+    compression_percentage: float = 1.0,
+):
+    """
+    Splits the given multivariate signal into time windows according to the given window_size and stride parameters.
+    The time windows are converted to an image according to the image_type string. The images are compressed and
+    passed through the pretrained VGG16 CNN.
+
+    :param :
+
+    """
+
+    # Create array of indices for each time window
+    windowed_indices = create_window_indices(time_series.shape[0], window_size, stride)
+
+    # set the input image size for the CNN
+    cnn_window_size = np.floor(window_size * compression_percentage)
+
+    # load pretrained CNN model
+    model = vgg16.VGG16(
+        include_top=False, input_shape=(cnn_window_size, cnn_window_size, 3)
+    )
+    flat_output = Flatten()(model.layers[-1].output)
+    model = Model(inputs=model.inputs, outputs=flat_output)
+
+    VGG16_feature_vectors = []
+    for window_i in windowed_indices:
+
+        # Raw data window
+        window_data_i = time_series[window_i, :]
+
+        # Apply VGG16 image preprocessing
+        input_i = _windowed_VGG16_preprocessing(
+            window_data_i, image_type, cnn_window_size
+        )
+
+        # extract feature vector
+        feature_vector_i = model.predict(input_i)[0]
+
+        VGG16_feature_vectors.append(feature_vector_i)
+
+    return np.array(VGG16_feature_vectors)
+
+
+def _windowed_VGG16_preprocessing(
+    data_window: np.array, image_type: str, window_size: int
+) -> np.array:
+    """_summary_
+
+    :param data_window: _description_
+    :param image_type: _description_
+    :param window_size: _description_
+    :return: _description_
+    """
+    # Generate image representing the time window
+    if image_type == "none":
+        img = np.abs(data_window)
+    else:
+        img = calculate_recurrence_plot(data_window, image_type)
+
+    # Compress time window
+    img = resize(
+        img,
+        (window_size, window_size),
+        anti_aliasing=True,
+    )
+
+    # Generate image tensor
+    img_3 = np.zeros((img.shape[0], img.shape[1], 3))
+    img_3[:, :, 0] = img
+    img_3[:, :, 1] = img
+    img_3[:, :, 2] = img
+
+    input = np.expand_dims(img_3, axis=0)
+    # Apply VGG16 image preprocessing
+    input = vgg16.preprocess_input(input)
+
+    return input
+
+
+def get_PCA_transformed_and_variance(
+    feature_vectors: np.array, max_components: int
+) -> Tuple[np.array, np.array]:
+
+    """
+    Decomposes the feature vectors found through the CNN to max_components number of principle components.
+
+    Parameters
+    ----------
+    max_components: int
+        The number of principle components used in the PCA model.
+
+    """
+
+    pca_model = PCA(n_components=max_components)
+
+    pca_transformed = pca_model.fit_transform(feature_vectors)
+
+    return pca_transformed, pca_model.explained_variance_ratio_
+
+
+def plot_PCA_explained_variance(explained_variance: np.array) -> plt.fig:
+    """_summary_
+
+    :param explained_variance: _description_
+    :return: _description_
+    """
+    plt.cla()
+    fig, ax = plt.subplots(figsize=(10, 5))
+
+    plt.plot(np.cumsum(explained_variance), marker=".", c="k")
+    plt.xticks(range(explained_variance.shape[0]))
+    ax.set_xticklabels(np.arange(explained_variance.shape[0]) + 1)
+    plt.title("PCA Components cumulative  variance")
+    plt.xlabel("No. of components")
+    plt.ylabel("Variance")
+
+    return fig
+
+
+def get_UMAP_tranformed(
+    feature_vectors: np.array,
+    n_neighbors: int,
+    min_dist: float,
+    n_components: int = 2,
+    random_state: int = 1,
+) -> np.array:
+    """_summary_
+
+    :param feature_vectors: _description_
+    :param n_neighbors: _description_
+    :param min_dist: _description_
+    :param n_components: _description_, defaults to 2
+    :param random_state: _description_, defaults to 1
+    :return: _description_
+    """
+
+    umap_model = umap_decomposition.UMAP(
+        n_neighbors, min_dist, random_state, n_components
+    )
+
+    umap_transformed = umap_model.fit_transform(feature_vectors)
+
+    return umap_transformed
+
+
+def plot_UMAP_2D(
+    UMAP_coords: np.array, kwargs: dict = {"c": "k", "marker": "."}
+) -> plt.figure:
+
+    plt.cla()
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.scatter(UMAP_coords[:, 0], UMAP_coords[:, 1], **kwargs)
+    ax.set_title("UMAP decomposition")
+
+    return fig
