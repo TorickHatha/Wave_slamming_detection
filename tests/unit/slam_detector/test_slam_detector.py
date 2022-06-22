@@ -73,3 +73,13 @@ def test_plot_UMAP_2D():
     fig = sut.plot_UMAP_2D(umap_transformed, {"c": y})
     file_path = "tests/tests_output/"
     plt.savefig(file_path + "UMAP_plot.png")
+
+
+def test_plot_compare_clusters_to_timeseries():
+
+    timeseries = np.random.rand(3, 100)
+    cluster_labels = np.ones(100)
+
+    fig = sut.plot_compare_clusters_to_timeseries(cluster_labels, timeseries)
+    file_path = "tests/tests_output/"
+    plt.savefig(file_path + "cluster_evaluation_plot.png")

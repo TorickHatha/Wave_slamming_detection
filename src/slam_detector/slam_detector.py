@@ -636,3 +636,50 @@ def plot_UMAP_2D(
     ax.set_title("UMAP decomposition")
 
     return fig
+
+
+def get_DBSCAN_cluster_labels(
+    UMAP_coords: np.array, epsilon: float, min_samples: int
+) -> np.array:
+    """
+
+    :param UMAP_coords: _description_
+    :param epsilon: _description_
+    :param min_samples: _description_
+    :return: cluster label for each point in UMAP space.
+    """
+
+    DBSCAN_model = DBSCAN(eps=epsilon, min_samples=min_samples).fit(UMAP_coords)
+
+    cluster_labels = DBSCAN_model.labels_ + 1
+
+    return cluster_labels
+
+
+def plot_compare_clusters_to_timeseries(
+    cluster_labels: np.array, timeseries: np.array
+) -> plt.figure:
+    """_summary_
+
+    :param cluster_labels: _description_
+    :param timeseries: m by n timeseries.
+    :return: _description_
+    """
+    fig, ax = plt.subplots(timeseries.shape[0] + 1, 1, figsize=(14, 8))
+
+    # Plot DBSCAN labels
+    ax[0].plot(cluster_labels, "k.", markersize=10)
+    ax[0].set_ylabel("Cluster label")
+    ax[0].xaxis.set_visible(False)
+    ax[0].set_ylim(0, max(cluster_labels) + 1)
+    ax[0].set_xticks(np.arange(0, max(cluster_labels)))
+
+    # Plot each variable in timeseries
+    for i, variable in enumerate(timeseries):
+        ax[i + 1].plot(variable, "k", linewidth=0.8)
+        ax[i + 1].set_title(f"Channel {i}")
+        if i + 1 < ax.shape[0] - 1:
+            ax[i + 1].xaxis.set_visible(False)
+
+    ax[-1].set_xlabel("Time")
+    return fig
